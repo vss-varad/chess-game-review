@@ -6,6 +6,7 @@ import { defineConfig } from 'vite';
 import { configDefaults } from 'vitest/config';
 
 export default defineConfig({
+  base: '/chess-game-review/',
   plugins: [react(), tailwindcss(), dsv()],
   server: {
     open: true,
