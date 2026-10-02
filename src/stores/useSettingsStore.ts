@@ -4,7 +4,7 @@ import useLocalStorage from '../hooks/useLocalStorage';
 
 export type Pieces = 'neo' | 'classic' | 'ocean';
 export type Board = 'green' | 'brown' | 'ice';
-export const DEPTHS = [12, 14, 16, 18] as const;
+export const DEPTHS = [8, 10, 12, 14, 16, 18] as const;
 export type Depth = typeof DEPTHS[number];
 
 interface SettingsStore {

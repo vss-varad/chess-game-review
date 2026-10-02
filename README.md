@@ -1,39 +1,59 @@
 # Game Review
 
-A free, in-browser chess game review in the style of chess.com's Game Review. Load a game from chess.com, lichess, or paste a PGN; Stockfish 19 runs locally in a Web Worker.
+A free, browser-based chess analysis workspace. Load games from chess.com or Lichess, or paste a PGN, then review every move with Stockfish 19 running locally in a Web Worker.
 
-## What you get
+## Features
 
-- Move classifications: Brilliant, Great, Best, Excellent, Good, Book, Inaccuracy, Mistake, Miss, Blunder
-- Accuracy per player (Lichess-style win-probability curve, volatility-weighted) and average centipawn loss
-- Estimated game rating per player (heuristic, see below)
-- Evaluation graph, eval bar, best-move arrows, "Best was …" hints, opening names
-- One-line explanations built from the engine's win-chance numbers, and Previous/Next **key moment** buttons
-- Selectable analysis depth (12 / 14 / 16 / 18, default 14)
+- Classifies moves from Brilliant and Great through Inaccuracy, Mistake, Miss, and Blunder
+- Summarizes player accuracy, average centipawn loss, and estimated game rating
+- Shows an evaluation graph, evaluation bar, best-move arrows, opening names, and move explanations
+- Jumps between key moments and lets you step through the game with keyboard-friendly controls
+- Offers six engine analysis depths (balanced default: 14), board themes, piece sets, and optional move sounds
+- Supports game archives from chess.com and Lichess, plus pasted PGN
 
-## Run it
+## Run locally
+
+Requires Node.js 20 or newer.
 
 ```bash
-npm install     # also copies the Stockfish 19 engine into public/stockfish-nnue.wasm/
+npm ci
 npm run dev
 ```
 
-Production build: `npm run build` (output in `dist/`).
+Copy `.env.example` to `.env`, add an API key for an OpenAI-compatible chat completions provider, then open the local URL printed by Vite. `npm run dev` starts both Vite and the AI Coach API. `npm ci` installs Stockfish and copies its browser worker into `public/stockfish-nnue.wasm/`.
 
-The full engine's wasm is ~99 MB. If your host limits file size, install with the lite engine (~1.8 MB, weaker):
+The provider key is read by the Node server and must never be placed in a `VITE_` variable or committed. The coach sends the opening, game result, accuracy summaries, and notable Stockfish-classified moves; it does not send player names or the raw PGN.
 
 ```bash
-STOCKFISH_VARIANT=lite npm install
+npm run check    # type-check, lint, and tests
+npm run build    # production build in dist/
+npm run preview  # serve the production build locally
 ```
 
-## Notes and limits
+## Engine size
 
-- **Game rating is an estimate.** chess.com's Game Rating algorithm isn't public. This app maps accuracy to a rating with its own lookup table and shows a ± band that widens for short games.
-- **Brilliant / Great / Miss are heuristics** (sacrifice detection, "only move" gap between engine lines, missed chances after an opponent error). They won't always match chess.com's labels.
-- Analysis depth is chosen on the screen before you generate a review (MultiPV 3). Higher depth = more reliable labels, slower review.
-- Not implemented: chess.com's interactive "Retry" mode (playing the best move on the board).
-- `npm run check` runs type-check, lint and tests.
+The full Stockfish 19 WebAssembly engine is about 99 MB. For a smaller download, install the lite engine instead (about 1.8 MB, with weaker analysis):
+
+```bash
+STOCKFISH_VARIANT=lite npm ci
+```
+
+The GitHub Pages workflow uses the full engine. Visitors download the roughly 99 MB engine when they first start a review; later visits may reuse the browser-cached engine files. For a smaller local build, use the lite variant above.
+
+## Publish on GitHub Pages
+
+The repository includes a GitHub Actions workflow for deployment. In the repository settings, set **Pages → Build and deployment → Source** to **GitHub Actions**, then push to the `main` branch or run the **Deploy to GitHub Pages** workflow manually. The Vite base path is configured for the `chess-game-review` repository name.
+
+GitHub Pages only hosts the static UI. To enable AI coaching in production, deploy `server/server.js` to a Node host, set `AI_API_KEY`, `AI_MODEL`, and `AI_ALLOWED_ORIGINS` there, bind to `0.0.0.0` if the host requires it, then add the non-secret repository variable `VITE_AI_COACH_ENDPOINT` with the hosted API URL ending in `/api/coach`. The server honors the host's `PORT` variable. Never add the provider key to GitHub Pages build variables. Without a hosted API, chess review and Stockfish still work; the coach remains disabled.
+
+The backend defaults to `https://api.openai.com/v1/chat/completions` and `gpt-4o-mini`. Compatible providers can be configured with `AI_BASE_URL` and `AI_MODEL`.
+
+## Notes
+
+- Game rating is an estimate based on this app's accuracy lookup table; chess.com's Game Rating algorithm is not public.
+- Brilliant, Great, and Miss classifications are heuristics and may differ from other review tools.
+- Higher analysis depths can take significantly longer, depending on the game and device.
 
 ## Built with
 
-Chess.js, React, TanStack Query, Zustand, HeroUI, Motion, Visx, Stockfish 19. Inspired by [wintrcat](https://www.youtube.com/watch?v=N6dIEzA--7Y).
+React, TypeScript, Vite, Chess.js, Stockfish 19, TanStack Query, Zustand, HeroUI, Motion, and Visx. Inspired by [wintrcat](https://www.youtube.com/watch?v=N6dIEzA--7Y).

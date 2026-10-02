@@ -1,4 +1,5 @@
 import { Button } from '@heroui/react';
+import { Icon } from '@iconify/react/dist/iconify.js';
 import { useMemo } from 'react';
 
 import MoveClassification from '../../icons/move-classifications/MoveClassification';
@@ -8,7 +9,9 @@ import { useStageStore } from '../../stores/useStageStore';
 import capitalize from '../../utils/capitalize';
 import { chooseTextColor } from '../../utils/chooseColorFromClassification';
 import cn from '../../utils/cn';
+import lanToSan from '../../utils/lanToSan';
 import useNames from '../../utils/useNames';
+import AICoach from './AICoach';
 import EvalGraph from './EvalGraph';
 
 import type { Classification } from '../../utils/classify';
@@ -39,6 +42,7 @@ export default function ReviewOverview() {
   const acpl = useEvalStore(state => state.acpl);
   const gameRating = useEvalStore(state => state.gameRating);
   const classHistory = useEvalStore(state => state.classHistory);
+  const best3MovesWithClass = useEvalStore(state => state.best3MovesWithClass);
   const openingNames = useEvalStore(state => state.openingNames);
   const header = currentGame.header();
   const elo = [header.WhiteElo, header.BlackElo].map(e => (e && e !== '?' ? e : undefined));
@@ -60,8 +64,79 @@ export default function ReviewOverview() {
     { name: bName, white: false, elo: elo[1], i: 1 },
   ];
 
+  const accuracyLeader = accuracy[0] === accuracy[1]
+    ? null
+    : accuracy[0] > accuracy[1] ? wName : bName;
+
+  const accuracyGap = Math.abs(accuracy[0] - accuracy[1]).toFixed(1);
+
+  const keyMomentCount = classHistory.filter(cl => [
+    'brilliant',
+    'great',
+    'inaccuracy',
+    'mistake',
+    'miss',
+    'blunder',
+  ].includes(cl)).length;
+
+  const momentSummary = keyMomentCount > 0
+    ? `The game had ${keyMomentCount} key moments to explore.`
+    : 'The move review shows how the evaluation developed.';
+
+  const gameInsight = accuracyLeader
+    ? `${accuracyLeader} led accuracy by ${accuracyGap} points. ${momentSummary}`
+    : `Both players finished at ${accuracy[0].toFixed(1)} accuracy. ${momentSummary}`;
+
+  const history = currentGame.history({ verbose: true });
+
+  const fens = [
+    'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+    ...history.map(move => move.after),
+  ];
+
+  const keyClassifications = ['brilliant', 'great', 'inaccuracy', 'mistake', 'miss', 'blunder'];
+
+  const coachReview = {
+    opening: opening || 'Unknown opening',
+    result: ['1-0', '0-1', '1/2-1/2'].includes(header.Result ?? '') ? header.Result! : '*',
+    players: [
+      { side: 'White' as const, accuracy: accuracy[0], averageCentipawnLoss: acpl[0] },
+      { side: 'Black' as const, accuracy: accuracy[1], averageCentipawnLoss: acpl[1] },
+    ],
+    keyMoments: history.flatMap((move, index) => {
+      const classification = classHistory[index];
+
+      if (!keyClassifications.includes(classification))
+        return [];
+
+      const bestMove = best3MovesWithClass[index]?.[0]?.pv;
+
+      return [{
+        moveNumber: Math.floor(index / 2) + 1,
+        side: move.color === 'w' ? 'White' as const : 'Black' as const,
+        played: move.san,
+        classification,
+        bestMove: bestMove ? lanToSan(bestMove, index, fens) : undefined,
+      }];
+    }).slice(0, 24),
+  };
+
   return (
     <div className="flex flex-col gap-4 text-small" id="ReviewOverview">
+      <div className="flex items-start gap-3 border-b border-default-200 pb-3">
+        <span className={`
+          grid size-9 shrink-0 place-items-center rounded-full bg-best/15
+          text-best
+        `}
+        >
+          <Icon aria-hidden="true" className="text-xl" icon="material-symbols:tips-and-updates-rounded" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-tiny font-semibold text-foreground-500 uppercase">Game insight</p>
+          <p className="mt-1 text-small">{gameInsight}</p>
+        </div>
+      </div>
+      <AICoach review={coachReview} />
       <EvalGraph />
       <div className="grid grid-cols-2 gap-3">
         {players.map(({ name, white, elo, i }) => (
@@ -74,11 +149,18 @@ export default function ReviewOverview() {
           >
             <div className="flex items-center gap-2">
               <span className={cn(
-                'size-3 shrink-0 rounded-full border border-default-400',
-                white ? 'bg-white' : 'bg-black',
+                `
+                  grid size-8 shrink-0 place-items-center rounded-full text-xs
+                  font-extrabold
+                `,
+                white
+                  ? 'bg-white text-black'
+                  : `border border-default-400 bg-black text-white`,
               )}
-              />
-              <p className="truncate font-bold">{name}</p>
+              >
+                {white ? 'W' : 'B'}
+              </span>
+              <p className="truncate font-bold" title={name}>{name}</p>
               {elo && <span className="text-tiny text-foreground-500">{elo}</span>}
             </div>
             <div>

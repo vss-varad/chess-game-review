@@ -1,7 +1,6 @@
 import { Button } from '@heroui/react';
 import dayjs from 'dayjs';
 import objectSupport from 'dayjs/plugin/objectSupport';
-import { nanoid } from 'nanoid';
 
 import useGameArchives from '../../queries/useGameArchives';
 import { useSelectGameStore } from '../../stores/useSelectGameStore';
@@ -17,11 +16,31 @@ export default function Months() {
   const site = useSelectGameStore(state => state.site)!;
   const submitMonth = useSelectGameStore(state => state.submitMonth);
   const setStage = useStageStore(state => state.setStage);
-  const { data, isLoading, error } = useGameArchives(username);
-  if (isLoading)
+  const { data, isLoading, error, refetch } = useGameArchives(username);
+
+  if (isLoading) {
     return <Loading label="Loading monthly collections…" />;
-  if (error)
-    return 'Error with Query';
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center gap-3 p-4 text-center" role="alert">
+        <p>{error.message || 'Could not load this account’s archives.'}</p>
+        <Button onPress={() => { void refetch(); }} radius="sm" size="sm">Try again</Button>
+      </div>
+    );
+  }
+
+  if (!data?.length) {
+    return (
+      <p className="p-4 text-center text-sm text-foreground-500">
+        No archived games found for
+        {' '}
+        {username}
+        .
+      </p>
+    );
+  }
 
   return (
     <>
@@ -31,7 +50,7 @@ export default function Months() {
           : getUnitFromLichessLink(yearArr[0], 'year');
 
         return (
-          <div key={nanoid()}>
+          <div key={year}>
             <p className={cn('mb-2 font-bold', i !== 0 && 'mt-4')}>{year}</p>
             <div className="grid grid-cols-[repeat(4,minmax(64px,1fr))] gap-1" id="month-grid">
               {yearArr.map((link) => {

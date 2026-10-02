@@ -82,7 +82,7 @@ export default function Board() {
           <img
             alt=""
             className="absolute rounded"
-            src={`/boards/${board}.png`}
+            src={`${import.meta.env.BASE_URL}boards/${board}.png`}
           />
           <Highlight />
           <Coors />

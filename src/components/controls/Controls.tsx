@@ -1,6 +1,7 @@
 import { Helmet } from '@dr.pogodin/react-helmet';
 import { Button } from '@heroui/react';
 import { Icon } from '@iconify/react/dist/iconify.js';
+import { Suspense, lazy } from 'react';
 import { createPortal } from 'react-dom';
 import { useMediaQuery } from 'react-responsive';
 import { useShallow } from 'zustand/react/shallow';
@@ -10,11 +11,13 @@ import { useSelectGameStore } from '../../stores/useSelectGameStore';
 import { useStageStore } from '../../stores/useStageStore';
 import cn from '../../utils/cn';
 import useNames from '../../utils/useNames';
+import Loading from '../Loading';
 import Forms from './Forms';
 import GameNav from './GameNav';
 import Games from './Games';
 import Months from './Months';
-import Review from './Review';
+
+const Review = lazy(() => import('./Review'));
 
 export default function Controls() {
   const reset = useBoardStore(state => state.reset);
@@ -77,7 +80,7 @@ export default function Controls() {
         shadow-2xl shadow-black/30 backdrop-blur-md
         xs:h-[660px]
         lg:mb-0 lg:h-auto lg:max-h-[calc(100vh-48px)] lg:min-h-[560px] lg:w-auto
-        lg:max-w-[480px] lg:p-4
+        lg:max-w-[400px] lg:p-4
       `}
       id="Controls"
     >
@@ -108,7 +111,7 @@ export default function Controls() {
           {stage === 'home'
             ? (
                 <>
-                  <img alt="" className="mr-1 size-5" src="/star.svg" />
+                  <img alt="" className="mr-1 size-5" src={`${import.meta.env.BASE_URL}star.svg`} />
                   <span>Game Review</span>
                 </>
               )
@@ -127,7 +130,11 @@ export default function Controls() {
             ? <Months />
             : stage === 'select-game'
               ? <Games />
-              : <Review />}
+              : (
+                  <Suspense fallback={<Loading label="Loading analysis…" />}>
+                    <Review />
+                  </Suspense>
+                )}
       </div>
       {isLg ? <GameNav /> : createPortal(<GameNav />, document.getElementById('root')!)}
     </div>

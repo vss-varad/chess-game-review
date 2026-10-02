@@ -1,5 +1,4 @@
 import { Button, Input } from '@heroui/react';
-import { DevTool } from '@hookform/devtools';
 import { Controller, useForm } from 'react-hook-form';
 
 import useLocalStorage from '../../hooks/useLocalStorage';
@@ -47,7 +46,6 @@ export default function ChessSiteForm({ site }: { site: Site }) {
       >
         Submit
       </Button>
-      {import.meta.env.PROD || <DevTool control={control} />}
     </form>
   );
 }

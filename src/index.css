@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
 
 @import 'tailwindcss';
 @config "../tailwind.config.js";
@@ -22,13 +22,14 @@
   }
 }
 
-/* App background: deep slate with soft green/teal glows and a faint chessboard texture */
 body {
+  margin: 0;
+  min-width: 320px;
   min-height: 100vh;
   background:
-    radial-gradient(1100px 620px at 12% -8%, rgb(129 182 76 / 0.2), transparent 60%),
-    radial-gradient(900px 520px at 100% 108%, rgb(38 194 163 / 0.14), transparent 55%),
-    linear-gradient(160deg, #141a21 0%, #0d1116 100%);
+    radial-gradient(ellipse at 16% 0%, rgb(129 182 76 / 0.13), transparent 34rem),
+    radial-gradient(ellipse at 92% 88%, rgb(198 112 77 / 0.1), transparent 32rem),
+    linear-gradient(145deg, #151a17 0%, #111513 48%, #171614 100%);
   background-attachment: fixed;
 }
 
@@ -39,7 +40,9 @@ body::before {
   z-index: -1;
   pointer-events: none;
   opacity: 0.035;
-  background-image: conic-gradient(#fff 25%, transparent 0 50%, #fff 0 75%, transparent 0);
-  background-size: 72px 72px;
-  mask-image: radial-gradient(ellipse at 30% 20%, #000, transparent 70%);
+  background-image:
+    linear-gradient(rgb(255 255 255 / 0.16) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.16) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse at 50% 28%, #000, transparent 78%);
 }

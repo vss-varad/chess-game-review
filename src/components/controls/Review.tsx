@@ -1,7 +1,7 @@
 import { Button, Progress } from '@heroui/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { DEFAULT_POSITION } from 'chess.js';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 
 import useStockfish from '../../queries/useStockfish';
@@ -16,8 +16,10 @@ import ReviewMoves from './ReviewMoves';
 import ReviewOverview from './ReviewOverview';
 
 const DEPTH_HINT: Record<number, string> = {
-  12: 'Quick',
-  14: 'Standard',
+  8: 'Fast',
+  10: 'Quick',
+  12: 'Standard',
+  14: 'Balanced',
   16: 'Deep',
   18: 'Max',
 };
@@ -27,14 +29,16 @@ export default function Review() {
   const depth = useSettingsStore(state => state.settings.depth);
   const chooseDepth = useSettingsStore(state => state.chooseDepth);
   const latest = useRef<Record<number, { moveEval: MoveEval; message: string }>>({});
-  const { data: stockfish, isLoading, isFetching, error } = useStockfish();
+  const reviewStartedAt = useRef<number | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const stage = useStageStore(state => state.stage);
+  const setStage = useStageStore(state => state.setStage);
+  const { data: stockfish, isLoading, isFetching, error } = useStockfish(stage === 'reviewing');
   const currentGame = useBoardStore(state => state.currentGame);
   const history = currentGame.history({ verbose: true });
   const fens = [DEFAULT_POSITION, ...history.map(move => move.after)];
   const populate = useEvalStore(state => state.populate);
   const resetEval = useEvalStore(state => state.reset);
-  const stage = useStageStore(state => state.stage);
-  const setStage = useStageStore(state => state.setStage);
 
   const {
     isListening,
@@ -56,7 +60,12 @@ export default function Review() {
     reset: state.reset,
   })));
 
-  const completePercentage = Math.floor((best3Moves.length / ((currentGame.isCheckmate() || currentGame.isStalemate()) ? fens.length - 1 : fens.length)) * 100); // if checkmate or stalemate, best3Moves has one less item than fens
+  const totalPositions = (currentGame.isCheckmate() || currentGame.isStalemate()) ? fens.length - 1 : fens.length;
+  const completePercentage = Math.floor((best3Moves.length / totalPositions) * 100);
+
+  const estimatedSecondsRemaining = best3Moves.length > 0
+    ? Math.ceil((elapsedSeconds / best3Moves.length) * (totalPositions - best3Moves.length))
+    : null;
 
   const outputListener = useCallback((message: string) => {
     if (
@@ -133,6 +142,25 @@ export default function Review() {
   }, [completePercentage]);
 
   useEffect(() => {
+    if (stage !== 'reviewing') {
+      reviewStartedAt.current = null;
+      setElapsedSeconds(0);
+
+      return;
+    }
+
+    reviewStartedAt.current ??= Date.now();
+
+    const interval = setInterval(() => {
+      if (reviewStartedAt.current !== null) {
+        setElapsedSeconds(Math.floor((Date.now() - reviewStartedAt.current) / 1000));
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [stage]);
+
+  useEffect(() => {
     /*
       Instead of sending all the fens to Stockfish at once,
       we send one fen at a time, listen to its output,
@@ -169,7 +197,7 @@ export default function Review() {
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <p className="text-small font-bold">Analysis depth</p>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   {DEPTHS.map(d => (
                     <Button
                       className="h-auto flex-col gap-0 py-1.5"
@@ -186,8 +214,7 @@ export default function Review() {
                   ))}
                 </div>
                 <p className="text-tiny text-foreground-500">
-                  Deeper analysis gives more reliable move labels and accuracy but takes longer.
-                  In my tests one position took about 1s at depth 12 and 3s at depth 16 (10s at depth 20), so a 40-move game can take several minutes at the higher settings. Times depend on your device.
+                  Depth 14 balances strength and speed. Choose 16 or 18 for deeper analysis, or 8 or 10 for faster results.
                 </p>
               </div>
               <Button
@@ -203,18 +230,32 @@ export default function Review() {
           )
         : stage === 'reviewing'
           ? (
-              <Progress
-                aria-label="Reviewing..."
-                classNames={{
-                  value: cn('mx-auto font-bold'),
-                  indicator: `
-                    bg-linear-[-45deg,hsl(var(--heroui-primary-600))_15%,hsl(var(--heroui-primary))_15%,hsl(var(--heroui-primary))_30%,hsl(var(--heroui-primary-600))_30%,hsl(var(--heroui-primary-600))_45%,hsl(var(--heroui-primary))_45%,hsl(var(--heroui-primary))_60%,hsl(var(--heroui-primary-600))_60%,hsl(var(--heroui-primary-600))_75%,hsl(var(--heroui-primary))_75%,hsl(var(--heroui-primary))_90%,hsl(var(--heroui-primary-600))_90%]
-                  `,
-                }}
-                showValueLabel={true}
-                size="lg"
-                value={completePercentage}
-              />
+              <div className="flex flex-col gap-2">
+                <Progress
+                  aria-label="Reviewing..."
+                  classNames={{
+                    value: cn('mx-auto font-bold'),
+                    indicator: `
+                      bg-linear-[-45deg,hsl(var(--heroui-primary-600))_15%,hsl(var(--heroui-primary))_15%,hsl(var(--heroui-primary))_30%,hsl(var(--heroui-primary-600))_30%,hsl(var(--heroui-primary-600))_45%,hsl(var(--heroui-primary))_45%,hsl(var(--heroui-primary))_60%,hsl(var(--heroui-primary-600))_60%,hsl(var(--heroui-primary-600))_75%,hsl(var(--heroui-primary))_75%,hsl(var(--heroui-primary))_90%,hsl(var(--heroui-primary-600))_90%]
+                    `,
+                  }}
+                  showValueLabel={true}
+                  size="lg"
+                  value={completePercentage}
+                />
+                <p className="text-center text-tiny text-foreground-500">
+                  {best3Moves.length}
+                  {' '}
+                  of
+                  {' '}
+                  {totalPositions}
+                  {' '}
+                  positions
+                  {estimatedSecondsRemaining === null
+                    ? ' · estimating time…'
+                    : ` · about ${formatDuration(estimatedSecondsRemaining)} left`}
+                </p>
+              </div>
             )
           : stage === 'review-overview'
             ? <ReviewOverview />
@@ -223,4 +264,14 @@ export default function Review() {
               : null}
     </div>
   );
+}
+
+function formatDuration(seconds: number) {
+  if (seconds < 60)
+    return `${seconds}s`;
+
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+
+  return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
 }

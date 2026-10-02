@@ -1,5 +1,3 @@
-import { nanoid } from 'nanoid';
-
 import type { Capturable } from '../../utils/getCaptured';
 import type { Color } from 'chess.js';
 
@@ -14,8 +12,8 @@ export default function CapturedGroup({ color, number, piece }: {
         <img
           alt=""
           className="inline-block size-[18px] object-cover"
-          key={nanoid()}
-          src={`/pieces/neo/${color}${piece}.png`}
+          key={i}
+          src={`${import.meta.env.BASE_URL}pieces/neo/${color}${piece}.png`}
           style={{
             marginLeft: i === 0 ? '-2px' : '-11px',
           }}

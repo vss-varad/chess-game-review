@@ -31,7 +31,7 @@ interface Inputs {
 export default function Games() {
   const username = useSelectGameStore(state => state.username)!;
   const monthLink = useSelectGameStore(state => state.monthLink);
-  const { data: games, isLoading, error } = useMonthlyArchives(monthLink!);
+  const { data: games, isLoading, error, refetch } = useMonthlyArchives(monthLink!);
   const [filtered, setFiltered] = useState(games);
 
   useEffect(() => {
@@ -111,11 +111,18 @@ export default function Games() {
     });
   };
 
-  if (isLoading)
+  if (isLoading) {
     return <Loading label="Fetching games…" />;
+  }
 
-  if (error)
-    return 'Error with Query';
+  if (error) {
+    return (
+      <div className="flex flex-col items-center gap-3 p-4 text-center" role="alert">
+        <p>{error.message || 'Could not load games for this month.'}</p>
+        <Button onPress={() => { void refetch(); }} radius="sm" size="sm">Try again</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex max-h-full flex-col gap-2 overflow-y-scroll" id="Games">

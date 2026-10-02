@@ -62,7 +62,7 @@ export default function Settings() {
               <SelectItem
                 key={pieces}
                 startContent={(
-                  <img className="size-10" src={`/pieces/${pieces}/wn.png`} />
+                  <img className="size-10" src={`${import.meta.env.BASE_URL}pieces/${pieces}/wn.png`} />
                 )}
               >
                 {capitalize(pieces)}
@@ -86,7 +86,7 @@ export default function Settings() {
                   <div
                     className="size-10"
                     style={{
-                      backgroundImage: `url("/boards/${board}.png")`,
+                      backgroundImage: `url("${import.meta.env.BASE_URL}boards/${board}.png")`,
                       backgroundSize: '400%',
                     }}
                   />

@@ -43,8 +43,17 @@ export default function useMonthlyArchives(monthLink: string) {
 }
 
 async function fetchChessComGames(monthLink: string) {
-  const res = await fetch(monthLink).then(res => res.json()) as { games: ChessComGame[] };
-  const noVariants = res.games.filter(game => game.rules === 'chess');
+  const response = await fetch(monthLink);
+
+  if (!response.ok)
+    throw new Error(`Chess.com could not load games for this month (HTTP ${response.status}).`);
+
+  const result = await response.json() as { games?: unknown };
+
+  if (!Array.isArray(result.games))
+    throw new Error('Chess.com returned an invalid game list.');
+
+  const noVariants = (result.games as ChessComGame[]).filter(game => game.rules === 'chess');
   noVariants.reverse();
 
   return noVariants;
@@ -91,12 +100,19 @@ async function fetchLichessGames(monthLink: string) {
   const games: LichessGame[] = [];
   const onMessage = (game: LichessGame) => games.push(game);
 
-  await fetch(monthLink, {
+  const response = await fetch(monthLink, {
     headers: {
       Accept: 'application/x-ndjson',
-      Authorization: `Bearer ${import.meta.env.VITE_LICHESS_TOKEN}`,
     },
-  }).then(readStream(onMessage));
+  });
+
+  if (!response.ok)
+    throw new Error(`Lichess could not load games for this month (HTTP ${response.status}).`);
+
+  if (!response.body)
+    throw new Error('Lichess returned an empty game stream.');
+
+  await readStream(onMessage)(response);
 
   const noVariants = games.filter(game => game.variant === 'standard');
 

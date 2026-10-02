@@ -1,5 +1,4 @@
 import { Button, Card, CardBody, CardFooter, Textarea } from '@heroui/react';
-import { DevTool } from '@hookform/devtools';
 import { Controller, useForm } from 'react-hook-form';
 
 import { useBoardStore } from '../../stores/useBoardStore';
@@ -84,7 +83,6 @@ export default function PGNForm() {
             Add Game
           </Button>
         </CardFooter>
-        {import.meta.env.PROD || <DevTool control={control} />}
       </form>
     </Card>
   );

@@ -21,15 +21,30 @@ export default function useGameArchives(username: string) {
 }
 
 async function fetchChessCom(username: string) {
-  const res = await fetch(`https://api.chess.com/pub/player/${username}/games/archives`).then(res => res.json()) as { archives: string[] };
+  const response = await fetch(`https://api.chess.com/pub/player/${encodeURIComponent(username)}/games/archives`);
 
-  return groupChessComLinksByYear(res.archives.reverse());
+  if (!response.ok)
+    throw new Error(`Chess.com could not load this account’s archives (HTTP ${response.status}).`);
+
+  const result = await response.json() as { archives?: unknown };
+
+  if (!Array.isArray(result.archives) || !result.archives.every(link => typeof link === 'string'))
+    throw new Error('Chess.com returned an invalid archive list.');
+
+  return groupChessComLinksByYear(result.archives.reverse());
 }
 
 async function fetchLichess(username: string) {
-  const createdAt = await fetch(`https://lichess.org/api/user/${username}`)
-    .then(res => res.json())
-    .then(userInfo => userInfo.createdAt as number); // UNIX timestamp
+  const response = await fetch(`https://lichess.org/api/user/${encodeURIComponent(username)}`);
+
+  if (!response.ok)
+    throw new Error(`Lichess could not load this account (HTTP ${response.status}).`);
+
+  const userInfo = await response.json() as { createdAt?: unknown };
+  const createdAt = userInfo.createdAt;
+
+  if (typeof createdAt !== 'number' || !Number.isFinite(createdAt))
+    throw new Error('Lichess returned invalid account data.');
 
   const now = dayjs();
   const created = dayjs(createdAt);
