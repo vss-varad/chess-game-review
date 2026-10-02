@@ -9,10 +9,18 @@ export default defineConfig({
   base: '/chess-game-review/',
   plugins: [react(), tailwindcss(), dsv()],
   server: {
+    host: '0.0.0.0',
     open: true,
     proxy: {
       '/api': 'http://127.0.0.1:8787',
     },
+    headers: {
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+      'Cross-Origin-Opener-Policy': 'same-origin',
+    },
+  },
+  preview: {
+    host: '0.0.0.0',
     headers: {
       'Cross-Origin-Embedder-Policy': 'require-corp',
       'Cross-Origin-Opener-Policy': 'same-origin',

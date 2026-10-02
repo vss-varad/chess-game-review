@@ -6,11 +6,11 @@
   "scripts": {
     "build": "tsc && vite build",
     "check": "tsc && npm-run-all -p lint test:once",
-    "dev": "npm-run-all -p dev:ui server",
-    "dev:ui": "vite",
+    "dev": "fuser -k 8787/tcp >/dev/null 2>&1 || true && npm-run-all -p dev:ui server",
+    "dev:ui": "vite --host 0.0.0.0",
     "lint": "eslint .",
     "postinstall": "node scripts/setup-stockfish.mjs",
-    "preview": "vite preview",
+    "preview": "vite preview --host 0.0.0.0",
     "server": "node server/server.js",
     "test": "vitest",
     "test:once": "vitest run"
