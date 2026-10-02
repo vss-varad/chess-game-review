@@ -64,7 +64,7 @@ export default function Board() {
     <div
       className={`
         flex h-fit w-full max-w-[642px] flex-col gap-2
-        lg:w-[min(860px,calc(100vh-150px),calc(100vw-420px))] lg:max-w-none
+        lg:w-[min(760px,calc(100vh-260px),calc(100vw-500px))] lg:max-w-none
         lg:shrink-0
       `}
       id="Board"

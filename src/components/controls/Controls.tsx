@@ -119,7 +119,7 @@ export default function Controls() {
         </p>
       </div>
       <div className={`
-        mb-32 grow overflow-scroll
+        mb-32 grow overflow-x-hidden overflow-y-auto
         xs:mb-16 xs:px-4
         lg:mb-0
       `}
