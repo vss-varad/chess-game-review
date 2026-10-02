@@ -17,7 +17,7 @@ export default function PGNForm() {
   const submitGame = useSelectGameStore(state => state.submitGame);
   const setStage = useStageStore(state => state.setStage);
 
-  const { handleSubmit, control, setError, formState } = useForm<Inputs>({
+  const { handleSubmit, control, setError, formState, watch } = useForm<Inputs>({
     defaultValues: {
       pgn: '',
     },
@@ -76,7 +76,7 @@ export default function PGNForm() {
             color="primary"
             disableAnimation
             fullWidth
-            isDisabled={!formState.isDirty || !formState.isValid}
+            isDisabled={!formState.isDirty || !watch('pgn').trim()}
             radius="none"
             type="submit"
           >

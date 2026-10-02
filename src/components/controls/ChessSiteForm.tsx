@@ -16,11 +16,12 @@ export default function ChessSiteForm({ site }: { site: Site }) {
   const submitUsername = useSelectGameStore(state => state.submitUsername);
   const setStage = useStageStore(state => state.setStage);
   const { item: lastUsername, set } = useLocalStorage(`${site}-username`);
-  const { handleSubmit, control, formState, watch } = useForm<Inputs>({ defaultValues: { username: lastUsername || '' } });
+  const { handleSubmit, control, watch } = useForm<Inputs>({ defaultValues: { username: lastUsername || '' } });
 
   const onSubmit: SubmitHandler<Inputs> = (data) => {
-    submitUsername(data.username, site);
-    set(`${site}-username`, data.username);
+    const username = data.username.trim();
+    submitUsername(username, site);
+    set(`${site}-username`, username);
     setStage('select-month');
   };
 
@@ -40,7 +41,7 @@ export default function ChessSiteForm({ site }: { site: Site }) {
       <Button
         className="h-12 font-semibold text-shadow-xs"
         color="primary"
-        isDisabled={watch('username') === '' || !formState.isValid}
+        isDisabled={!watch('username').trim()}
         radius="sm"
         type="submit"
       >
