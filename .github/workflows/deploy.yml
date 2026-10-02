@@ -31,6 +31,8 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+        env:
+          STOCKFISH_VARIANT: lite
 
       - name: Check
         run: npm run check
