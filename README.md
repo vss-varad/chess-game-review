@@ -40,7 +40,7 @@ STOCKFISH_VARIANT=lite npm ci
 
 The GitHub Pages workflow uses the lite single-threaded engine, so visitors download about 1.8 MB when they first start a review. Local installs use the full engine by default. For a smaller local build, use the lite variant above.
 
-Vercel uses the lite engine during installation to keep the deployed WebAssembly asset small. The Vercel install command is configured in `vercel.json`.
+Vercel installs the full Stockfish 19 engine, matching local installs. The WebAssembly asset is about 99 MB, so deployment or first-load limits may apply.
 
 ## Publish on GitHub Pages
 
