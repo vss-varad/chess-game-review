@@ -40,6 +40,8 @@ STOCKFISH_VARIANT=lite npm ci
 
 The GitHub Pages workflow uses the lite single-threaded engine, so visitors download about 1.8 MB when they first start a review. Local installs use the full engine by default. For a smaller local build, use the lite variant above.
 
+Vercel uses the lite engine during installation to keep the deployed WebAssembly asset small. The Vercel install command is configured in `vercel.json`.
+
 ## Publish on GitHub Pages
 
 The repository includes a GitHub Actions workflow for deployment. In the repository settings, set **Pages → Build and deployment → Source** to **GitHub Actions**, then push to the `main` branch or run the **Deploy to GitHub Pages** workflow manually. The Vite base path is configured for the `chess-game-review` repository name.

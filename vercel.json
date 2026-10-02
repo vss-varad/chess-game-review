@@ -1,0 +1,3 @@
+{
+  "installCommand": "STOCKFISH_VARIANT=lite npm ci"
+}
