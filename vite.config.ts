@@ -5,8 +5,10 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { configDefaults } from 'vitest/config';
 
+const basePath = process.env.VITE_BASE_PATH ?? '/';
+
 export default defineConfig({
-  base: '/chess-game-review/',
+  base: basePath,
   plugins: [react(), tailwindcss(), dsv()],
   server: {
     host: '0.0.0.0',
