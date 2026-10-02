@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 const ENGINE_URL = `${import.meta.env.BASE_URL}stockfish-nnue.wasm/stockfish.js`;
-const INIT_TIMEOUT_MS = 30_000;
+const INIT_TIMEOUT_MS = 120_000;
 
 export default function useStockfish(enabled = true) {
   return useQuery({
