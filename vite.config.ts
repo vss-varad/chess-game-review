@@ -27,12 +27,15 @@ export default defineConfig({
           if (!normalizedId.includes('/node_modules/'))
             return;
 
-          if (/\/(react|react-dom|scheduler)\//.test(normalizedId))
+          if (/\/(?:react|react-dom|scheduler)\//.test(normalizedId))
             return 'react-vendor';
 
-          if (/\/(?:@heroui|@react-aria|@react-stately|@internationalized)\//.test(normalizedId)
-            || /\/(?:react-aria|react-stately)\//.test(normalizedId))
+          if (
+            /\/(?:@heroui|@react-aria|@react-stately|@internationalized)\//.test(normalizedId)
+            || /\/(?:react-aria|react-stately)\//.test(normalizedId)
+          ) {
             return 'ui-vendor';
+          }
 
           if (/\/(?:framer-motion|motion-dom|motion-utils)\//.test(normalizedId))
             return 'motion-vendor';
