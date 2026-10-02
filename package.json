@@ -12,6 +12,7 @@
     "postinstall": "node scripts/setup-stockfish.mjs",
     "preview": "vite preview --host 0.0.0.0",
     "server": "node server/server.js",
+    "start": "NODE_ENV=production node server/server.js",
     "test": "vitest",
     "test:once": "vitest run"
   },

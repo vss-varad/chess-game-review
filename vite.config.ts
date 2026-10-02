@@ -1,3 +1,5 @@
+import process from 'node:process';
+
 import dsv from '@rollup/plugin-dsv';
 // https://vitejs.dev/config/
 import tailwindcss from '@tailwindcss/vite';

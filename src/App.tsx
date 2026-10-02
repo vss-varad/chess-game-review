@@ -83,8 +83,7 @@ export default function App() {
   );
 }
 
-// eslint-disable-next-line unused-imports/no-unused-vars
-function Fallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => any }) {
+function Fallback({ error }: { error: Error }) {
   return (
     <div className="flex h-screen flex-col gap-2 p-8" role="alert">
       <p className="text-2xl">Something went wrong:</p>

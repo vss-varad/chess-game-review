@@ -1,7 +1,9 @@
 import { Buffer } from 'node:buffer';
+import { createReadStream, existsSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
+import path from 'node:path';
 import process from 'node:process';
-import { URL } from 'node:url';
+import { URL, fileURLToPath } from 'node:url';
 
 import { CoachError, generateCoachAdvice } from './ai.js';
 
@@ -12,6 +14,26 @@ const RATE_LIMIT = 8;
 const RATE_WINDOW_MS = 60_000;
 const recentRequests = new Map();
 let lastRateLimitCleanup = Date.now();
+const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const distDir = path.resolve(projectRoot, process.env.DIST_PATH ?? 'dist');
+
+const MIME_TYPES = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.mjs': 'application/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.ico': 'image/x-icon',
+  '.wasm': 'application/wasm',
+  '.txt': 'text/plain; charset=utf-8',
+  '.map': 'application/json; charset=utf-8',
+};
 
 const allowedOrigins = new Set(
   (process.env.AI_ALLOWED_ORIGINS ?? '')
@@ -99,63 +121,140 @@ async function readJson(request) {
   }
 }
 
+function withSecureHeaders(response) {
+  response.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+  response.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  response.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+}
+
+function sendStaticFile(response, filePath) {
+  const ext = path.extname(filePath).toLowerCase();
+  const contentType = MIME_TYPES[ext] ?? 'application/octet-stream';
+
+  withSecureHeaders(response);
+
+  response.writeHead(200, {
+    'content-type': contentType,
+    'cache-control': ext === '.html' ? 'no-store' : 'public, max-age=31536000, immutable',
+  });
+
+  const stream = createReadStream(filePath);
+
+  stream.on('error', () => {
+    response.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' });
+    response.end('Failed to read static asset.');
+  });
+
+  stream.pipe(response);
+}
+
+function serveStaticAsset(request, response) {
+  const url = new URL(request.url ?? '/', 'http://localhost');
+
+  if (url.pathname.startsWith('/api/'))
+    return false;
+
+  const safePath = path.normalize(url.pathname).replace(/^\/+/, '');
+  const filePath = path.resolve(distDir, safePath || 'index.html');
+
+  if (!filePath.startsWith(distDir))
+    return false;
+
+  const hasFile = existsSync(filePath) && statSync(filePath).isFile();
+
+  if (!hasFile) {
+    const fallback = path.join(distDir, 'index.html');
+
+    if (existsSync(fallback)) {
+      sendStaticFile(response, fallback);
+
+      return true;
+    }
+
+    response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+    response.end('Not found.');
+
+    return true;
+  }
+
+  sendStaticFile(response, filePath);
+
+  return true;
+}
+
 const server = createServer(async (request, response) => {
   const url = new URL(request.url ?? '/', 'http://localhost');
 
-  if (url.pathname !== '/api/health' && url.pathname !== '/api/coach') {
-    sendJson(response, 404, { error: 'Not found.' });
+  if (url.pathname.startsWith('/api/')) {
+    if (url.pathname !== '/api/health' && url.pathname !== '/api/coach') {
+      sendJson(response, 404, { error: 'Not found.' });
+
+      return;
+    }
+
+    if (!applyCors(request, response)) {
+      sendJson(response, 403, { error: 'This website is not allowed to use the AI Coach API.' });
+
+      return;
+    }
+
+    if (request.method === 'OPTIONS') {
+      response.writeHead(204, {
+        'access-control-allow-origin': request.headers.origin ?? '*',
+        'access-control-allow-methods': 'GET, POST, OPTIONS',
+        'access-control-allow-headers': 'content-type',
+      });
+
+      response.end();
+
+      return;
+    }
+
+    if (url.pathname === '/api/health' && request.method === 'GET') {
+      sendJson(response, 200, {
+        ok: true,
+        coachConfigured: Boolean(process.env.AI_API_KEY),
+        model: process.env.AI_MODEL ?? 'gpt-4o-mini',
+      });
+
+      return;
+    }
+
+    if (url.pathname !== '/api/coach' || request.method !== 'POST') {
+      sendJson(response, 405, { error: 'Method not allowed.' });
+
+      return;
+    }
+
+    const ip = request.socket.remoteAddress ?? 'unknown';
+
+    if (isRateLimited(ip)) {
+      sendJson(response, 429, { error: 'Too many coaching requests. Wait a minute and try again.' });
+
+      return;
+    }
+
+    try {
+      const review = await readJson(request);
+      const advice = await generateCoachAdvice(review);
+      sendJson(response, 200, advice);
+    }
+    catch (error) {
+      const status = error instanceof CoachError ? error.status : 500;
+      const message = error instanceof CoachError ? error.message : 'The coaching request failed.';
+
+      sendJson(response, status, { error: message });
+    }
 
     return;
   }
 
-  if (!applyCors(request, response)) {
-    sendJson(response, 403, { error: 'This website is not allowed to use the AI Coach API.' });
-
-    return;
+  if (process.env.NODE_ENV === 'production' || existsSync(distDir)) {
+    if (serveStaticAsset(request, response))
+      return;
   }
 
-  if (request.method === 'OPTIONS') {
-    response.writeHead(204);
-    response.end();
-
-    return;
-  }
-
-  if (url.pathname === '/api/health' && request.method === 'GET') {
-    sendJson(response, 200, {
-      ok: true,
-      coachConfigured: Boolean(process.env.AI_API_KEY),
-      model: process.env.AI_MODEL ?? 'gpt-4o-mini',
-    });
-
-    return;
-  }
-
-  if (url.pathname !== '/api/coach' || request.method !== 'POST') {
-    sendJson(response, 405, { error: 'Method not allowed.' });
-
-    return;
-  }
-
-  const ip = request.socket.remoteAddress ?? 'unknown';
-
-  if (isRateLimited(ip)) {
-    sendJson(response, 429, { error: 'Too many coaching requests. Wait a minute and try again.' });
-
-    return;
-  }
-
-  try {
-    const review = await readJson(request);
-    const advice = await generateCoachAdvice(review);
-    sendJson(response, 200, advice);
-  }
-  catch (error) {
-    const status = error instanceof CoachError ? error.status : 500;
-    const message = error instanceof CoachError ? error.message : 'The coaching request failed.';
-
-    sendJson(response, status, { error: message });
-  }
+  sendJson(response, 404, { error: 'Not found.' });
 });
 
 const host = process.env.HOST ?? '127.0.0.1';
