@@ -39,6 +39,7 @@ export default function Review() {
   const fens = [DEFAULT_POSITION, ...history.map(move => move.after)];
   const populate = useEvalStore(state => state.populate);
   const resetEval = useEvalStore(state => state.reset);
+  const [openingDataError, setOpeningDataError] = useState(false);
 
   const {
     isListening,
@@ -136,8 +137,9 @@ export default function Review() {
 
   useEffect(() => {
     if (completePercentage === 100) {
-      populate();
-      setStage('review-overview');
+      void populate()
+        .then(() => setStage('review-overview'))
+        .catch(() => setOpeningDataError(true));
     }
   }, [completePercentage]);
 
@@ -174,6 +176,14 @@ export default function Review() {
       }
     }
   }, [stockfish, stage, isListening]);
+
+  if (openingDataError) {
+    return (
+      <p className="p-4 text-sm text-danger-500" role="alert">
+        Analysis completed, but opening data could not be loaded. Reload the page and try again.
+      </p>
+    );
+  }
 
   if (isLoading || isFetching)
     return <Loading label="Loading Stockfish…" />;

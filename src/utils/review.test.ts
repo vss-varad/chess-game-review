@@ -2,6 +2,7 @@ import { Chess } from 'chess.js';
 import { describe, expect, test } from 'vitest';
 
 import { computeStats, moveAccuracy } from './accuracy';
+import classify from './classify';
 import { explainMove } from './explainMove';
 import { estimateRating } from './gameRating';
 import { isSacrifice } from './refineClassification';
@@ -74,6 +75,25 @@ describe('isSacrifice', () => {
     // knight takes a pawn-defended knight: knight for knight, level material
     const trade = 'k7/8/2p5/3n4/8/2N5/8/K7 w - - 0 1';
     expect(isSacrifice(play(trade, 'Nxd5')!)).toBe(false);
+  });
+});
+
+describe('classify', () => {
+  test('recognizes opening-book moves from the supplied dataset', () => {
+    const move = new Chess().move('e4');
+
+    expect(classify({
+      subArr: [
+        { pv: 'e2e4', nodes: 1, multiPv: 1, eval: 0 },
+        { pv: 'd2d4', nodes: 1, multiPv: 2, eval: 0 },
+      ],
+      lan: 'e2e4',
+      history: [move],
+      i: 0,
+      beforeEval: 0,
+      afterEval: 0,
+      openings: [{ eco: 'C20', epd: '', name: 'King\'s Pawn Game', pgn: '1. e4', uci: 'e2e4' }],
+    })).toBe('book');
   });
 });
 

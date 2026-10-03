@@ -1,7 +1,6 @@
 import { DEFAULT_POSITION } from 'chess.js';
 import { create } from 'zustand';
 
-import openings from '../openings.tsv';
 import { computeStats } from '../utils/accuracy';
 import classify from '../utils/classify';
 import { type GameRating, estimateRating } from '../utils/gameRating';
@@ -162,7 +161,7 @@ function sortBest3Moves(best3Moves: MoveEvalMerged[][]) {
   });
 }
 
-function classifyBest3Moves(best3Moves: MoveEval[][], history: Move[]) {
+function classifyBest3Moves(best3Moves: MoveEval[][], history: Move[], openings: Opening[]) {
   // Step 1: reuse cp
   const reusedCp = reuseCp(best3Moves, history);
 
@@ -191,6 +190,7 @@ function classifyBest3Moves(best3Moves: MoveEval[][], history: Move[]) {
         i,
         beforeEval,
         afterEval,
+        openings,
       });
 
       return { ...moveEval, classification };
@@ -202,7 +202,7 @@ function classifyBest3Moves(best3Moves: MoveEval[][], history: Move[]) {
   return classified;
 }
 
-function classifyActualMoves(best3MovesWithClass: MoveEvalWithClass[][], cps: (string | number)[], history: Move[]) {
+function classifyActualMoves(best3MovesWithClass: MoveEvalWithClass[][], cps: (string | number)[], history: Move[], openings: Opening[]) {
   return history.map((move, i, arr) => {
     // if actual move is in top 3, then it's already classified within best3MovesWithClass
     // else run classify again
@@ -218,11 +218,12 @@ function classifyActualMoves(best3MovesWithClass: MoveEvalWithClass[][], cps: (s
       i,
       beforeEval: cps[i],
       afterEval: cps[i + 1],
+      openings,
     });
   });
 }
 
-function getOpenings(fens: string[]) {
+function getOpenings(fens: string[], openings: Opening[]) {
   const openingNames: string[] = [];
 
   for (let i = 0; i < fens.length; i++) {
@@ -279,7 +280,7 @@ interface EvalStore {
   accuracy: [number, number];
   acpl: [number, number];
   gameRating: [GameRating, GameRating];
-  populate: () => void;
+  populate: () => Promise<void>;
   reset: () => void;
 }
 
@@ -291,16 +292,17 @@ export const useEvalStore = create<EvalStore>(set => ({
   accuracy: [0, 0],
   acpl: [0, 0],
   gameRating: [{ rating: 0, margin: 0 }, { rating: 0, margin: 0 }],
-  populate: () => set(() => {
+  populate: async () => {
+    const { default: openings } = await import('../openings.tsv');
     // should only be called once, after best3Moves is filled
     const best3Moves = useStockfishOutputStore.getState().best3Moves;
     const currentGame = useBoardStore.getState().currentGame;
     const history = currentGame.history({ verbose: true });
-    const best3MovesWithClass = classifyBest3Moves(best3Moves, history);
+    const best3MovesWithClass = classifyBest3Moves(best3Moves, history, openings);
     const fens = [DEFAULT_POSITION, ...history.map(move => move.after)];
-    const openingNames = getOpenings(fens);
+    const openingNames = getOpenings(fens, openings);
     const cps = getCps(best3MovesWithClass, currentGame);
-    const baseClassHistory = classifyActualMoves(best3MovesWithClass, cps, history);
+    const baseClassHistory = classifyActualMoves(best3MovesWithClass, cps, history, openings);
     const classHistory = refineClassifications({ history, best3: best3MovesWithClass, cps, base: baseClassHistory });
     const { accuracy, acpl } = computeStats(cps);
 
@@ -309,7 +311,7 @@ export const useEvalStore = create<EvalStore>(set => ({
       estimateRating(accuracy[1], Math.floor(history.length / 2)),
     ];
 
-    return { best3MovesWithClass, classHistory, openingNames, cps, accuracy, acpl, gameRating };
-  }),
+    set({ best3MovesWithClass, classHistory, openingNames, cps, accuracy, acpl, gameRating });
+  },
   reset: () => set({ best3MovesWithClass: [], classHistory: [], openingNames: [], cps: [], accuracy: [0, 0], acpl: [0, 0], gameRating: [{ rating: 0, margin: 0 }, { rating: 0, margin: 0 }] }),
 }));

@@ -1,6 +1,5 @@
 import { Chess, DEFAULT_POSITION, type Move } from 'chess.js';
 
-import openings from '../openings.tsv';
 import lanToSan from './lanToSan';
 
 import type { MoveEvalMerged, MoveEvalWithClass } from '../stores/useEvalStore';
@@ -306,7 +305,7 @@ function classifyByEval(beforeEval: string | number, afterEval: string | number,
   }
 }
 
-function sniffBook(lan: string, history: Move[], i: number) {
+function sniffBook(lan: string, history: Move[], i: number, openings: Opening[]) {
   // must be able to sniff variants as well
   const fens = [DEFAULT_POSITION, ...history.map(move => move.after)];
   const fenBeforeMove = fens[i];
@@ -345,6 +344,7 @@ export default function classify({
   i,
   beforeEval,
   afterEval,
+  openings,
 }: {
   subArr: MoveEvalMerged[] | MoveEvalWithClass[];
   lan: string;
@@ -352,6 +352,7 @@ export default function classify({
   i: number;
   beforeEval: string | number;
   afterEval: string | number;
+  openings: Opening[];
 }) {
-  return sniffForced(subArr) || sniffBook(lan, history, i) || classifyByEval(beforeEval, afterEval, i);
+  return sniffForced(subArr) || sniffBook(lan, history, i, openings) || classifyByEval(beforeEval, afterEval, i);
 }
